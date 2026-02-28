@@ -1,11 +1,53 @@
+<div align="center">
+
 # say less _
 
-**Open-source Claude Skills for your inbox — no dashboards, no forms, just conversation.**
+### Open-source Claude Skills for people with better things to do than manage their inbox.
 
-> "Clean up my inbox." → done.
-> "Show me what I spent on DoorDash last month." → CSV exported.
+</div>
 
-Say Less is a free, open-source collection of [Claude Skills](https://www.anthropic.com/claude) that connect to your Gmail and let you manage your inbox through plain English. No new apps to learn. No settings to configure. Just talk to Claude.
+<div align="center">
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
+[![Skills](https://img.shields.io/badge/skills-2-c8ff00?labelColor=111)](./sayless_skills)
+[![Claude](https://img.shields.io/badge/powered%20by-Claude-blueviolet)](https://www.anthropic.com/claude)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+
+</div>
+
+Say Less is a free, open-source collection of [Claude Skills](https://www.anthropic.com/claude) that connect to your Gmail and let you manage your inbox through plain English. No new apps to learn. No API keys. No dashboards. Just talk.
+
+```
+you:       clean up my inbox
+say less:  Found 142 senders across ~2,400 emails. Top offender: Groupon — 340 emails.
+           Want to go category by category, or just the worst offenders?
+
+you:       kill all the marketing stuff, keep my newsletters
+say less:  Done. 1,100 emails from 58 senders cleared. Your newsletters are untouched.
+```
+
+**Install:**
+1. Clone or download this repo
+2. Open **Claude Desktop → Settings → Skills → Add Skill**
+3. Point it at a skill folder (e.g. `sayless_skills/inbox-detox`)
+4. Talk to Claude
+
+---
+
+## Why Say Less?
+
+Most inbox tools want you to log into a new product, learn a new UI, and trust a third-party service with your email. Say Less skips all of that.
+
+Use Say Less when you want to:
+
+- **Reach inbox zero without a new app.** Everything runs inside Claude. No new accounts, no OAuth flows to a stranger's server.
+- **Clean email through conversation.** "Unsubscribe from everything retail" or "delete all LinkedIn notifications" — natural language, immediate action.
+- **Audit your spending from receipts.** Claude scans your inbox, parses structured purchase data from dozens of merchants, and drops a CSV on your desktop.
+- **Stay in control.** Say Less always tells you what it's about to do and waits for a yes before deleting anything.
+- **Extend it yourself.** Each skill is a single Markdown file. Write one in 20 minutes with zero code.
+
+> [!NOTE]
+> Say Less requires the **Gmail integration** to be enabled in Claude. Go to **Settings → Integrations → Gmail** and connect your account before installing any skill.
 
 ---
 
@@ -13,65 +55,95 @@ Say Less is a free, open-source collection of [Claude Skills](https://www.anthro
 
 ### 🗑 Inbox Detox
 
-Scans your inbox for the biggest email offenders, groups them by sender, and lets you unsubscribe and bulk-delete entire categories in a single conversation.
+Bulk unsubscribe and delete marketing email through conversation. No more hunting through individual emails for tiny unsubscribe links.
 
-- Surfaces top senders by volume (Wayfair, LinkedIn, Medium, etc.)
-- Handles unsubscribing via Gmail's native button or in-email links
-- Bulk-deletes hundreds of emails per sender
-- Always confirms before deleting — never touches transactional email without asking
-- Works in batches of 5–10 senders so you stay in control
+**What it does:**
+- Scans your Promotions, Social, Spam, and Updates tabs
+- Groups results by sender and sorts by volume — biggest offenders first
+- Shows 5–10 senders at a time; you decide keep / unsubscribe + delete / delete only / skip
+- Executes unsubscribes via Gmail's native button, then bulk-deletes all matching emails
+- Falls back to copy-paste Gmail search queries if Chrome isn't available
 
-**Example:**
 ```
-you:        clean up my inbox
-say less:   Found 142 senders across ~2,400 emails. Top offender: Groupon — 340 emails.
-            Want to go category by category, or just the worst offenders?
+you:       my inbox is a disaster
+say less:  Working with you@gmail.com. Start with promos and newsletters,
+           or go broader and hit social notifications and spam too?
 
-you:        kill all the marketing stuff, keep my newsletters
-say less:   Done. 1,100 emails from 58 senders cleared. Your newsletters are untouched.
+you:       promos first
+say less:  Top senders in Promotions:
+           1. Wayfair <deals@wayfair.com> — 47 emails
+           2. LinkedIn <messages-noreply@linkedin.com> — 38 emails
+           3. Medium <noreply@medium.com> — 31 emails
+
+           Keep, unsubscribe + delete, delete only, or skip?
+
+you:       unsubscribe and delete Wayfair. keep medium. skip LinkedIn.
+say less:  About to unsubscribe + delete ~47 emails from Wayfair. Go ahead?
+
+you:       yes
+say less:  Done. Unsubscribed from Wayfair + deleted 47 emails.
+           Continue with the next batch, or switch to another category?
 ```
 
 ---
 
 ### 🧾 Receipt Scanner
 
-Searches Gmail for purchase receipts and order confirmations, parses structured data (merchant, amount, payment method, category), and exports a clean downloadable CSV.
+Searches Gmail for purchase receipts and order confirmations, extracts structured data, and exports a downloadable CSV. Useful for spending audits, expense reports, or just figuring out how much you actually spent on DoorDash.
 
-- Covers DoorDash, Lyft, Anthropic, Google Play, PayPal, Amazon, and dozens more
-- Auto-categorizes spending: Food Delivery, Transportation, Subscriptions, Utilities, etc.
-- Exports a CSV with totals and a summary breakdown by category
-- Deduplicates receipts across multiple confirmation emails for the same order
+**What it does:**
+- Runs multiple search queries to maximize receipt coverage
+- Parses merchant, product, price, payment method, and order number per email
+- Handles merchant-specific formats: DoorDash, Lyft, Anthropic, Google Play, PayPal, Amazon, and more
+- Auto-categorizes: Food Delivery, Transportation, Subscriptions, Utilities, Healthcare, and others
+- Exports a sorted CSV with a total spend row and a category breakdown summary
 
-**Example:**
 ```
-you:        what did I spend in January?
-say less:   Scanned 847 emails. Found 63 receipts.
-            Total spend: $1,842.17
-            Top categories: Food Delivery ($312), Subscriptions ($97), Transportation ($84)
+you:       what did I spend last month?
+say less:  Scanning receipts from Jan 1 – Jan 31...
+           Found 63 purchases across 847 emails.
 
-            Exporting CSV now...
+           Total spend: $1,842.17
+
+           By category:
+           Food Delivery    $312.44   (18 orders)
+           Subscriptions    $97.00    (6 services)
+           Transportation   $84.20    (4 trips)
+           Utilities        $210.00   (3 bills)
+           ...
+
+           Exporting purchase_history.csv now.
 ```
 
 ---
 
-## Getting Started
+## How It Works
 
-### Prerequisites
+Claude Skills extend Claude with domain-specific instructions loaded at conversation start. Say Less skills use Claude's built-in **Gmail connector** — no third-party service ever touches your email.
 
-- **Claude Desktop** (or Claude.ai with Skills support)
-- **Gmail integration** enabled in Claude — Settings → Integrations → Gmail
-- **Claude in Chrome** (recommended for Inbox Detox — enables one-click unsubscribe)
+```
+you ──► Claude (+ SKILL.md instructions)
+             │
+             ▼
+        Gmail connector
+             │
+             ▼
+        your inbox
+```
 
-### Install a Skill
+Each `SKILL.md` file tells Claude: what to trigger on, what tools to call, how to parse results, and what safety rules to follow. There's no server, no runtime, and no deployment — it's just a structured prompt.
 
-1. Open **Claude Desktop**
-2. Go to **Settings → Skills**
-3. Click **Add Skill** (or **Import Skill**)
-4. Select the skill folder containing `SKILL.md`
-   e.g. `sayless_skills/inbox-detox` or `sayless_skills/receipt-scanner`
-5. Confirm and enable
+---
 
-Done. Open a new conversation and just start talking.
+## Safety
+
+Say Less is intentionally conservative about destructive actions.
+
+- **Confirm before delete.** Claude always states the sender name and approximate count, then waits for an explicit yes. No exceptions.
+- **Transactional email protection.** Anything that looks like a receipt, order confirmation, shipping update, bank statement, or password reset gets flagged before any action is suggested.
+- **Metadata-only scanning.** Inbox Detox reads only `From` and `Subject` headers during the initial scan. It never reads full email bodies unless it needs to find an unsubscribe link.
+- **One body read per sender, maximum.** If Gmail's native unsubscribe button isn't available, Claude reads the single most recent email from that sender — nothing more.
+- **No speculative pagination.** Searches stop at the first page of results unless you explicitly ask for a deeper scan.
 
 ---
 
@@ -79,56 +151,47 @@ Done. Open a new conversation and just start talking.
 
 ```
 sayless_skills/
-├── inbox-detox/       # Bulk unsubscribe + delete marketing email
+├── inbox-detox/       🗑  Bulk unsubscribe + delete marketing email
 │   └── SKILL.md
-└── receipt-scanner/   # Parse Gmail receipts → CSV export
+└── receipt-scanner/   🧾  Parse Gmail receipts → CSV export
     └── SKILL.md
 ```
 
-Each skill is a single `SKILL.md` file — a structured prompt that tells Claude how to behave, what tools to use, and how to handle edge cases. No code to run, no servers to deploy.
+Skills follow a simple convention:
 
----
-
-## How It Works
-
-Claude Skills extend Claude with domain-specific instructions. Say Less skills use Claude's **Gmail connector** to read and search your email — no third-party services, no API keys, nothing leaves your Claude session.
-
-```
-you → Claude → Gmail connector → your inbox
-```
-
-Claude reads the `SKILL.md` instructions and follows the workflow: scan, surface, confirm, act. You stay in control of every deletion.
-
----
-
-## Safety
-
-- **Always confirms before deleting.** Claude states the sender and approximate count, then waits for explicit approval.
-- **Protects transactional email.** Receipts, order confirmations, and password resets are flagged before any action is taken.
-- **Metadata-first scanning.** Inbox Detox reads only sender/subject headers during the initial scan — it never reads full email bodies unless needed to find an unsubscribe link.
-- **One message body read per sender, maximum.** If Gmail's native unsubscribe button isn't visible, Claude reads the single most recent email from that sender. Nothing more.
-
----
-
-## Contributing
-
-Skills are just Markdown files with a structured front-matter block and natural language instructions. If you have an idea for a new inbox-related skill, open a PR with a new folder under `sayless_skills/`.
-
-Skill structure:
 ```
 sayless_skills/<skill-name>/
-├── SKILL.md       # Required — skill definition and instructions
-├── README.md      # Optional — human-readable overview
+├── SKILL.md       # Required — triggers, instructions, workflow, safety rules
+├── README.md      # Optional — human-readable summary
 ├── templates/     # Optional — reusable prompt fragments
 └── examples/      # Optional — example inputs/outputs
 ```
 
 ---
 
-## License
+## Contributing
 
-MIT — free to use, modify, and distribute.
+Want to add a new skill? Skills are just Markdown — no code required.
+
+A `SKILL.md` has two parts: a YAML front-matter block (name + description/trigger) and a natural language workflow that Claude follows. If you can describe a useful inbox task in plain English, you can write a skill.
+
+Open a PR with a new folder under `sayless_skills/`. Check the existing skills for the expected format.
+
+> [!TIP]
+> Good skill ideas: calendar cleanup, attachment organizer, contact deduplication, newsletter digest, unread triage. If it touches Gmail and you'd do it yourself in 30 minutes, Claude can probably do it in 30 seconds.
 
 ---
 
-Built by [Spenser Marshall](https://github.com/spenserkm) · Powered by [Claude](https://www.anthropic.com/claude)
+## Additional Resources
+
+- [Claude Skills documentation](https://www.anthropic.com/claude) — how Skills work in Claude Desktop
+- [Gmail integration guide](https://www.anthropic.com/claude) — how to connect Gmail to Claude
+- [Claude in Chrome](https://www.anthropic.com/claude) — enables one-click unsubscribe and bulk delete in the Gmail UI
+
+---
+
+<div align="center">
+
+MIT License · Built by [Spenser Marshall](https://github.com/spenserkm) · Powered by [Claude](https://www.anthropic.com/claude)
+
+</div>
