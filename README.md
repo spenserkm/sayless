@@ -24,6 +24,9 @@ say less:  Found 142 senders across ~2,400 emails. Top offender: Groupon — 340
 
 you:       kill all the marketing stuff, keep my newsletters
 say less:  Done. 1,100 emails from 58 senders cleared. Your newsletters are untouched.
+
+you:       analyze my receipts
+say less:  Here: purchase_receipts.csv
 ```
 
 **Install:**
