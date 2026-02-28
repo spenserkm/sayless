@@ -175,6 +175,7 @@
             color: var(--bg);
             padding: 1rem 2rem;
             border-radius: 8px;
+            border: none;
             font-weight: 700;
             font-size: 0.95rem;
             text-decoration: none;
@@ -182,11 +183,19 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            cursor: pointer;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 30px var(--accent-dim);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.65;
+            cursor: wait;
+            transform: none;
+            box-shadow: none;
         }
 
         .btn-secondary {
@@ -501,6 +510,13 @@
             margin-bottom: 2.5rem;
         }
 
+        .install-status {
+            margin-top: 1rem;
+            min-height: 1.4rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
         /* ── Footer ── */
         footer {
             border-top: 1px solid var(--border);
@@ -608,7 +624,7 @@
     <h1>Your inbox<br>has too much<br>to <em>say.</em></h1>
     <p class="hero-sub">A conversational cleanup assistant that lives inside Claude. No dashboards. No forms. Just tell it what to kill.</p>
     <div class="hero-actions">
-        <a href="#get-started" class="btn-primary">Install the Skill &rarr;</a>
+        <button type="button" class="btn-primary" data-install-skills>Install Skills &rarr;</button>
         <a href="#demo" class="btn-secondary">See it in action</a>
     </div>
 
@@ -770,9 +786,10 @@
     <h2 class="section-title reveal">Ready to shut your<br>inbox up?</h2>
     <p class="section-desc reveal">Install Say Less as a Claude Skill and take back your inbox in under a minute.</p>
     <div class="reveal">
-        <a href="https://github.com" class="btn-primary" style="font-size: 1.05rem; padding: 1.1rem 2.5rem;">
-            View on GitHub &rarr;
-        </a>
+        <button type="button" class="btn-primary" data-install-skills style="font-size: 1.05rem; padding: 1.1rem 2.5rem;">
+            Install Skills &rarr;
+        </button>
+        <div class="install-status" id="install-status" role="status" aria-live="polite"></div>
     </div>
 </section>
 
@@ -781,6 +798,7 @@
     <p>Say Less &mdash; a Claude Skill by <a href="#">Spenser Marshall</a>. Built for people with better things to do than manage their inbox.</p>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
     // Scroll reveal
     const observer = new IntersectionObserver((entries) => {
@@ -802,6 +820,170 @@
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });
+    });
+
+    const INSTALL_BUTTON_TEXT = "Install Skills →";
+    const installButtons = Array.from(document.querySelectorAll('[data-install-skills]'));
+    const installStatusEl = document.getElementById('install-status');
+
+    function getRepoInfoFromLocation() {
+        if (window.location.hostname.endsWith('.github.io')) {
+            const owner = window.location.hostname.split('.')[0];
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const repo = pathParts[0];
+            if (owner && repo) {
+                return { owner, repo };
+            }
+        }
+        return { owner: 'spenserkm', repo: 'sayless' };
+    }
+
+    function setInstallStatus(message, isError) {
+        if (!installStatusEl) {
+            return;
+        }
+        installStatusEl.textContent = message;
+        installStatusEl.style.color = isError ? 'var(--coral)' : 'var(--text-muted)';
+    }
+
+    function setInstallLoading(isLoading, label) {
+        installButtons.forEach(button => {
+            button.disabled = isLoading;
+            button.textContent = label || INSTALL_BUTTON_TEXT;
+        });
+    }
+
+    async function fetchGitHubJson(url) {
+        const response = await fetch(url, {
+            headers: { Accept: 'application/vnd.github+json' }
+        });
+        if (!response.ok) {
+            throw new Error(`GitHub API request failed (${response.status})`);
+        }
+        return response.json();
+    }
+
+    async function fetchText(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch file (${response.status})`);
+        }
+        return response.text();
+    }
+
+    async function listSkillDirectories(owner, repo) {
+        const baseUrl = `https://api.github.com/repos/${owner}/${repo}/contents/sayless_skills`;
+        const entries = await fetchGitHubJson(baseUrl);
+        const dirs = entries.filter(entry => entry.type === 'dir');
+        const validSkillDirs = [];
+
+        for (const dir of dirs) {
+            const children = await fetchGitHubJson(dir.url);
+            const hasSkillFile = children.some(child => child.type === 'file' && child.name === 'SKILL.md');
+            if (hasSkillFile) {
+                validSkillDirs.push({ name: dir.name, path: dir.path, apiUrl: dir.url });
+            }
+        }
+        return validSkillDirs;
+    }
+
+    async function collectSkillFiles(apiUrl, relativePrefix, collected) {
+        const entries = await fetchGitHubJson(apiUrl);
+
+        for (const entry of entries) {
+            if (entry.type === 'dir') {
+                await collectSkillFiles(entry.url, relativePrefix, collected);
+                continue;
+            }
+            if (entry.type !== 'file') {
+                continue;
+            }
+
+            const relativePath = entry.path.replace(relativePrefix, '');
+            const fileContent = await fetchText(entry.download_url);
+            collected.push({ relativePath, fileContent });
+        }
+    }
+
+    async function buildSkillBlob(skillDir) {
+        const skillZip = new JSZip();
+        const relativePrefix = `${skillDir.path}/`;
+        const files = [];
+
+        await collectSkillFiles(skillDir.apiUrl, relativePrefix, files);
+
+        const hasSkillDefinition = files.some(file => file.relativePath === 'SKILL.md');
+        if (!hasSkillDefinition) {
+            throw new Error(`${skillDir.name} is missing SKILL.md`);
+        }
+
+        for (const file of files) {
+            skillZip.file(file.relativePath, file.fileContent);
+        }
+
+        return skillZip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    }
+
+    function downloadBlob(filename, blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    async function installSkillsArchive() {
+        setInstallLoading(true, 'Building skills...');
+        setInstallStatus('Discovering skills...');
+
+        const { owner, repo } = getRepoInfoFromLocation();
+        const errors = [];
+
+        try {
+            const skillDirs = await listSkillDirectories(owner, repo);
+            if (!skillDirs.length) {
+                throw new Error('No skill folders with SKILL.md were found.');
+            }
+
+            const bundleZip = new JSZip();
+            for (const skillDir of skillDirs) {
+                setInstallStatus(`Packaging ${skillDir.name}.skill...`);
+                try {
+                    const skillBlob = await buildSkillBlob(skillDir);
+                    bundleZip.file(`${skillDir.name}.skill`, skillBlob);
+                } catch (skillError) {
+                    errors.push(`${skillDir.name}: ${skillError.message}`);
+                }
+            }
+
+            const packagedCount = skillDirs.length - errors.length;
+            if (!packagedCount) {
+                throw new Error('All skill packages failed. Please try again.');
+            }
+
+            setInstallStatus('Creating archive...');
+            const archiveBlob = await bundleZip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+            downloadBlob('sayless-skills.zip', archiveBlob);
+
+            if (errors.length) {
+                setInstallStatus(`Downloaded with ${errors.length} skipped. Import each .skill from the zip into Claude Desktop.`, true);
+                console.error('Skill packaging issues:', errors);
+            } else {
+                setInstallStatus(`Downloaded ${packagedCount} skill file(s). Import each .skill from the zip into Claude Desktop.`);
+            }
+        } catch (error) {
+            setInstallStatus(`Install failed: ${error.message}`, true);
+            console.error(error);
+        } finally {
+            setInstallLoading(false, INSTALL_BUTTON_TEXT);
+        }
+    }
+
+    installButtons.forEach(button => {
+        button.addEventListener('click', installSkillsArchive);
     });
 </script>
 
